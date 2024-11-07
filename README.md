@@ -1,4 +1,4 @@
-**Opis projekta**
+##Opis projekta
 
 Ortogonalna Frekvencijska Diviziona Multipleksija (OFDM) je napredna tehnika
 koja se koristi u bežičnim komunikacijama, ali je također uspješno prilagođena
