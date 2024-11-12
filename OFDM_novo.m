@@ -142,45 +142,34 @@ fprintf('\nThe binary coding bit error rate = %5.2e, based on %d errors\n',ber,n
 %   ----------------------------------------------------
 
 %   1.  Pass the ofdm signal through the channel
-
 after_channel = filter(channel, 1, clipped);
 
 %   2.   Add Noise
-
 awgn_noise = awgn(zeros(1,length(after_channel)),0);
 
 %   3.  Add noise to signal...
-
 recvd_signal = awgn_noise+after_channel;
 
 %   4.  Convert Data back to "parallel" form to perform FFT
-
 recvd_signal_matrix = reshape(recvd_signal,rows_ifft_data, cols_ifft_data);
 
 %   5.  Remove CP
-
 recvd_signal_matrix(1:cp,:)=[];
 
 %   6.  Perform FFT
-
 for i=1:cols_ifft_data
 
     %   FFT
-    
     fft_data_matrix(:,i) = fft(recvd_signal_matrix(:,i),fft_points);
-
 end
 
 %   7.  Convert to serial stream
-
 recvd_serial_data = reshape(fft_data_matrix, 1,(block_size*num_cols));
 
 %   8.  Demodulate the data
-
 qam_demodulated_data = qamdemod(recvd_serial_data,M);
 
 figure(8)
-
 stem(qam_demodulated_data,'rx');
 
 %BER
