@@ -16,18 +16,16 @@ n = 3e4; % broj bita
 nsamp = 1;
 N = 10^5;
 
-%TRANSMITTER
+%    TRANSMITTER
 data = randi([0 1],N,1); % unipolarni
 figure(1)
 stem(data); grid on; xlabel('Ulazna sekvenca');
 title('Poslani podaci "O"')
 
-%   2.  Perform QAM modulation
 qam_modulated_data = qammod(data,M,'InputType','bit','UnitAveragePower',true);
 ytx =qam_modulated_data;
 scatterplot(qam_modulated_data);title('MODULATED TRANSMITTED DATA');
 
-%   3.  Do IFFT on each block
 num_cols=(length(qam_modulated_data)/block_size);
 data_matrix = reshape(qam_modulated_data, block_size, num_cols);
 cp_start = block_size-cp;
