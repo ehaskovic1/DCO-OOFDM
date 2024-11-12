@@ -3,38 +3,27 @@ clear all
 close all
 
 format long;
-M = 16;                          %   Qam signal constellation
-k = log2(M);     % Bits per symbol
-EbNo = (5:15)';      % Eb/No values (dB)
-numSymPerFrame = 100;   % Number of QAM symbols per frame
-no_of_data_points = 144;        %   have 128 data points
-block_size = 8;                 %   size of each ofdm block
-cp = ceil(0.1*block_size);  %   length of cyclic prefix
-no_of_ifft_points = block_size;           %   128 points for the FFT/IFFT
-no_of_fft_points = block_size;
-n = 3e4; % Number of bits to process
-nsamp = 1; % Oversampling rate
-berEst = zeros(size(EbNo));
+M = 16;
+k = log2(M);
+EbNo = (5:15)';
+symbol_per_frame = 100;
+data_points = 144;
+block_size = 8;
+cp = ceil(0.1*block_size);
+ifft_points = block_size;
+fft_points = block_size;
+n = 3e4; % broj bita
+nsamp = 1;
+N = 10^5;
 
-% ***** Simulation M-QAM transmission over noise ***
-% with using Monte Carlo simulation
-q=4;
-m=2^q; % M-QAM level power of 2 
-loop=20; % Monte Carlo 
-N=100000;  % Frame length (x_1 x_2 ... x_N)
-SNRdB=0:15; % SNR in dB
-SNR=10.^(SNRdB/10);
-Rate= zeros(1, length(SNRdB)); %
-
-%   +++++   TRANSMITTER    +++++
-%   1.  Generate 1 x 128 vector of random data points
-data_source=randi([0 1],N,1); % 1 or 0 
+%TRANSMITTER
+data = randi([0 1],N,1); % unipolarni
 figure(1)
-stem(data_source); grid on; xlabel('Data Points'); ylabel('transmitted data phase representation')
-title('Transmitted Data "O"')
+stem(data); grid on; xlabel('Ulazna sekvenca');
+title('Poslani podaci "O"')
 
 %   2.  Perform QAM modulation
-qam_modulated_data = qammod(data_source,M,'InputType','bit','UnitAveragePower',true);
+qam_modulated_data = qammod(data,M,'InputType','bit','UnitAveragePower',true);
 ytx =qam_modulated_data;
 scatterplot(qam_modulated_data);title('MODULATED TRANSMITTED DATA');
 
@@ -44,7 +33,7 @@ data_matrix = reshape(qam_modulated_data, block_size, num_cols);
 cp_start = block_size-cp;
 cp_end = block_size;
 for i=1:num_cols
-    ifft_data_matrix(:,i) = ifft((data_matrix(:,i)),no_of_ifft_points);
+    ifft_data_matrix(:,i) = ifft((data_matrix(:,i)),ifft_points);
     for j=1:cp
        actual_cp(j,i) = ifft_data_matrix(j+cp_start,i);
     end
@@ -123,7 +112,7 @@ for i=1:cols_ifft_data
     
     %   FFT
     
-    fft_data_matrix(:,i) = fft(recvd_signal_matrix(:,i),no_of_fft_points);
+    fft_data_matrix(:,i) = fft(recvd_signal_matrix(:,i),fft_points);
 
 end
 
@@ -146,7 +135,7 @@ grid on;xlabel('Data Points');ylabel('received data phase representation');title
 dataOutMatrix = de2bi(qam_demodulated_data,k);
 dataOut = dataOutMatrix(:);
 
-[numErrors,ber] = biterr(data_source,dataOut);
+[numErrors,ber] = biterr(data,dataOut);
 fprintf('\nThe binary coding bit error rate = %5.2e, based on %d errors\n',ber,numErrors)
 
 
@@ -180,7 +169,7 @@ for i=1:cols_ifft_data
 
     %   FFT
     
-    fft_data_matrix(:,i) = fft(recvd_signal_matrix(:,i),no_of_fft_points);
+    fft_data_matrix(:,i) = fft(recvd_signal_matrix(:,i),fft_points);
 
 end
 
@@ -199,14 +188,14 @@ stem(qam_demodulated_data,'rx');
 %BER
  noe=0; 
  for ii= 1:1:length(recvd_serial_data)
-   if data_source(ii)~=recvd_serial_data(ii)
+   if data(ii)~=recvd_serial_data(ii)
     noe=noe+1;
    else
        noe=noe;
    end 
  end 
 % ber= noe/length(ofdm_signal); 
-ber=( noe/length(data_source)); 
+ber=( noe/length(data)); 
 
 % CALCULATE QAM BER USING FORMULA
 EbNodB2=0:2:16;
