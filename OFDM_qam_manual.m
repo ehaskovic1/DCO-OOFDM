@@ -105,7 +105,20 @@ for i=1:cols_ifft_data % FFT
 end
 
 primljeni_clipped = reshape(fft_data_matrix,1,(block_size*broj_kolona)); % Konverzija u seriju
-qam_demodulated_data = qamdemod(primljeni_clipped,M);
+%qam_demodulated_data = qamdemod(primljeni_clipped,M);
+
+%--------------------------------------------------------------
+I = repmat((-(k-1):2:(k-1)), k, 1); 
+Q = repmat((-(k-1):2:(k-1)).', 1, k); 
+idealna_konstelacija = (I(:) + 1i * Q(:)) / sqrt(mean(abs(I(:) + 1i * Q(:)).^2)); 
+
+qam_demodulated_data = zeros(size(primljeni_clipped));
+for i = 1:length(primljeni_clipped)
+    [~, idx] = min(abs(primljeni_clipped(i) - idealna_konstelacija));
+    qam_demodulated_data(i) = idx - 1;
+end
+
+%-------------------------------------------------------------
 figure(7)
 stem(qam_demodulated_data,'rx');
 grid on;xlabel('Podaci');
