@@ -113,11 +113,16 @@ ylabel('Amplituda');
 sgtitle('O-OFDM 16PSK - gotove fje za modulaciju');
 
 % Konstelacijski dijagram
-scatterplot(modData(:)); grid on;
-title('\rmKonstelacijski dijagram - predaja');
-scatterplot(fftData(:));
-title('\rmKonstelacijski dijagram - prijem');
-grid on;
+scatterplot(modData(:), [],[], 'k.'); grid on;
+set(gcf, 'Color', 'w'); % Postavlja bijelu pozadinu za cijelu figuru
+set(gca, 'Color', 'w'); % Postavlja bijelu pozadinu za koordinatni sistem
+title('\rmKonstelacijski dijagram - predaja', 'FontSize', 14, 'FontWeight', 'bold', 'Color', 'k');
+
+scatterplot(fftData(:),  [],[], 'b.');
+title('\rmKonstelacijski dijagram - prijem', 'FontSize', 14, 'FontWeight', 'bold', 'Color', 'k');
+grid on; 
+set(gcf, 'Color', 'w'); % Postavlja bijelu pozadinu za cijelu figuru
+set(gca, 'Color', 'w'); % Postavlja bijelu pozadinu za koordinatni sistem
 
 % PSD prikaz
 [psd,f] = periodogram(txDataOptical(:), hamming(length(txDataOptical(:))), 2^14, fs, 'centered');
