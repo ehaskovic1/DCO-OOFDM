@@ -1,10 +1,10 @@
 clc;
 clear all;
 close all;
- 
+
 % Parametri
 N = 64; % Broj OFDM podnosioca
-M = 16; % 16-QAM
+M = 16; % 16-PSK
 numSymbols = 1000; % Broj OFDM simbola
 EbNo = 0:2:20; % Eb/No vrijednosti u dB
 symbolRate = 1e6; % Brzina simbola
@@ -14,27 +14,27 @@ fiberLength = 10e3; % Dužina vlakna (10 km)
 beta2 = -2.17e-26; % Koeficijent hromatske disperzije (s^2/m)
 berSimulated = zeros(size(EbNo));
 berTheoretical = zeros(size(EbNo));
- 
+
+%Generisanje sluèajnih podataka
+rng(10);
+data = randi([0 M-1], N, numSymbols);
+
+%16-PSK modulacija - rucno implementirana
+theta = 2 * pi * data(:) / M;
+modData = exp(1j * theta);
+
 for i = 1:length(EbNo)
-    % Generisanje slucajnih podataka
-    data = randi([0 M-1], N, numSymbols);
-    
-    % 16-QAM modulacija - rucno implementirana
-    I = 2*mod(data, sqrt(M)) - sqrt(M) + 1;
-    Q = 2*floor(data/sqrt(M)) - sqrt(M) + 1;
-    modData = I + 1j*Q;
-    
-    % IFFT - zbog OFDM
+    %IFFT
     ifftData = ifft(reshape(modData, N, numSymbols), N, 1);
     
-    % Dodavanje CP (Cyclic Prefix)
+    %Dodavanje CP (Cyclic Prefix)
     cpLength = 16;
     txData = [ifftData(end-cpLength+1:end,:); ifftData];
-
-    % DCO 
-    dcBias = 0.6; % optimalno izabrano
-    txDataOptical = (txData) + dcBias; % Dodavanje DC biasa
     
+    % DCO
+    dcBias = 0.2;
+    txDataOptical = (txData) + dcBias; 
+
     % Opticki kanal
     txData_after_fiber = optical_channel(txDataOptical, fiberLength, beta2, fs);
     rxData = txData_after_fiber;
@@ -43,29 +43,33 @@ for i = 1:length(EbNo)
     snr = EbNo(i) + 10*log10(log2(M)) - 10*log10(N/(N+cpLength));
     rxData = awgn(rxData, snr, 'measured');
     
-    % Uklanjanje CP
-    rxData = rxData(cpLength+1:end, :); %ono sto dodamo na predaji moramo eliminsati na prijemu
+    %Uklanjanje CP
+    rxData = rxData(cpLength+1:end, :);
     
-    % FFT
-    fftData = fft(rxData-dcBias, N, 1); %ono sto dodamo na predaji moramo eliminsati na prijemu
+    %FFT
+    fftData = fft(rxData-dcBias, N, 1);
     
-    % 16-QAM demodulacija - rucno implementirana
-    I = 2 * round((real(fftData) + (sqrt(M) - 1)) / 2) - sqrt(M) + 1;
-    Q = 2 * round((imag(fftData) + (sqrt(M) - 1)) / 2) - sqrt(M) + 1;
-
-    demodData = floor((I + sqrt(M) - 1)/2) + sqrt(M) * floor((Q + sqrt(M) - 1)/2);
-    demodData = mod(demodData, M); 
+    %16-PSK demodulacija
+    rxPhase = angle(fftData);
+    rxPhase(rxPhase<0)=rxPhase(rxPhase<0)+2*pi;
+    demodData=round(M*rxPhase / (2*pi));
+    demodData(demodData==M)=0;
     
-    % Prebacivanje u bite
+    %Osiguranje da `demodData` bude unutar opsega [0, M-1]
+    demodData(demodData < 0) = 0;
+    demodData(demodData >= M) = M-1;
+    demodData=demodData(:);
+    
+    %Prebacivanje u bite
     dataBits = de2bi(data(:), log2(M), 'left-msb');
     demodDataBits = de2bi(demodData(:), log2(M), 'left-msb');
     
-    % BER racunanje
-    [numErrors, ber] = biterr(dataBits(:), demodDataBits(:));
+    %BER racunanje
+    [numErrors, ber] = biterr(dataBits(:)', demodDataBits(:)');
     berSimulated(i) = ber;
     
-    % Teorijski BER za 16-QAM u kanalu sa AWGN
-    berTheoretical(i) = berawgn(EbNo(i), 'qam', M);
+    %Teorijski BER za 16-PSK
+    berTheoretical(i) = berawgn(EbNo(i), 'psk', M, 'nondiff');
 end
  
 % Grafièki prikazi
@@ -103,7 +107,8 @@ plot(real(rxData(:,1)));
 title('Primljeni Signal');
 xlabel('Vrijeme');
 ylabel('Amplituda');
-sgtitle('O-OFDM 16QAM - rucno implementirana funkcija');
+ 
+sgtitle('O-OFDM 16PSK - rucno implementirane fje');
 
 % Konstelacijski dijagram
 scatterplot(modData(:)); grid on;
@@ -128,4 +133,4 @@ title('PSD - OFDM');
 xlabel('Frequency (MHz)');
 ylabel('Power/Frequency (dB/Hz)'); ylim([-150 -40]);
 grid on;
-sgtitle('SGS za rucno implementirani OFDM 16QAM');
+sgtitle('SGS za rucno implementirani OFDM 16PSK');

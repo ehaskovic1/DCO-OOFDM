@@ -1,7 +1,6 @@
 clc;
-clear all;
 close all;
- 
+
 % Parametri
 N = 64; % Broj OFDM podnosioca
 M = 16; % 16-QAM
@@ -15,14 +14,16 @@ beta2 = -2.17e-26; % Koeficijent hromatske disperzije (s^2/m)
 berSimulated = zeros(size(EbNo));
 berTheoretical = zeros(size(EbNo));
  
+% QAM modulacija i demodulacija objekti
+qamMod = comm.RectangularQAMModulator('ModulationOrder', M, 'BitInput', true);
+qamDemod = comm.RectangularQAMDemodulator('ModulationOrder', M, 'BitOutput', true);
+ 
 for i = 1:length(EbNo)
     % Generisanje slucajnih podataka
-    data = randi([0 M-1], N, numSymbols);
+    data = randi([0 1], N*log2(M), numSymbols);
     
-    % 16-QAM modulacija - rucno implementirana
-    I = 2*mod(data, sqrt(M)) - sqrt(M) + 1;
-    Q = 2*floor(data/sqrt(M)) - sqrt(M) + 1;
-    modData = I + 1j*Q;
+    % 16-QAM modulacija
+    modData = qamMod(data(:));
     
     % IFFT - zbog OFDM
     ifftData = ifft(reshape(modData, N, numSymbols), N, 1);
@@ -30,12 +31,12 @@ for i = 1:length(EbNo)
     % Dodavanje CP (Cyclic Prefix)
     cpLength = 16;
     txData = [ifftData(end-cpLength+1:end,:); ifftData];
-
-    % DCO 
-    dcBias = 0.6; % optimalno izabrano
-    txDataOptical = (txData) + dcBias; % Dodavanje DC biasa
     
-    % Opticki kanal
+    % DCO
+    dcBias = 0.6; % optimalno izabrano 
+    txDataOptical = (txData) + dcBias; % Dodavanje DC biasa
+
+    %Optički kanal
     txData_after_fiber = optical_channel(txDataOptical, fiberLength, beta2, fs);
     rxData = txData_after_fiber;
     
@@ -49,19 +50,11 @@ for i = 1:length(EbNo)
     % FFT
     fftData = fft(rxData-dcBias, N, 1); %ono sto dodamo na predaji moramo eliminsati na prijemu
     
-    % 16-QAM demodulacija - rucno implementirana
-    I = 2 * round((real(fftData) + (sqrt(M) - 1)) / 2) - sqrt(M) + 1;
-    Q = 2 * round((imag(fftData) + (sqrt(M) - 1)) / 2) - sqrt(M) + 1;
-
-    demodData = floor((I + sqrt(M) - 1)/2) + sqrt(M) * floor((Q + sqrt(M) - 1)/2);
-    demodData = mod(demodData, M); 
-    
-    % Prebacivanje u bite
-    dataBits = de2bi(data(:), log2(M), 'left-msb');
-    demodDataBits = de2bi(demodData(:), log2(M), 'left-msb');
+    % 16-QAM demodulacija
+    demodData = qamDemod(fftData(:));
     
     % BER racunanje
-    [numErrors, ber] = biterr(dataBits(:), demodDataBits(:));
+    [numErrors, ber] = biterr(data(:), demodData);
     berSimulated(i) = ber;
     
     % Teorijski BER za 16-QAM u kanalu sa AWGN
@@ -103,7 +96,8 @@ plot(real(rxData(:,1)));
 title('Primljeni Signal');
 xlabel('Vrijeme');
 ylabel('Amplituda');
-sgtitle('O-OFDM 16QAM - rucno implementirana funkcija');
+ 
+sgtitle('O-OFDM 16QAM - koristeci gotove funkcije za modulaciju');
 
 % Konstelacijski dijagram
 scatterplot(modData(:)); grid on;
@@ -120,7 +114,7 @@ plot(f/10^6,10*log10(psd)); title('PSD - DCO OOFDM');
 xlabel('Frequency (MHz)');
 ylabel('Power/Frequency (dB/Hz)'); ylim([-150 -40]);
 grid on;
-% hold on;
+hold on;
 subplot(2,1,2);
 [psd2,f] = periodogram(txData(:), hamming(length(txData(:))), 2^14, fs, 'centered');
 plot(f/10^6,10*log10(psd2))
@@ -128,4 +122,4 @@ title('PSD - OFDM');
 xlabel('Frequency (MHz)');
 ylabel('Power/Frequency (dB/Hz)'); ylim([-150 -40]);
 grid on;
-sgtitle('SGS za rucno implementirani OFDM 16QAM');
+sgtitle('SGS za OFDM 16QAM');
